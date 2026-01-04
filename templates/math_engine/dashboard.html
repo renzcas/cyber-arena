@@ -1,11 +1,59 @@
-<h1>Math Engine</h1>
+{% extends "base.html" %}
+{% block content %}
 
-<form method="POST" action="/math/compute">
-    <input name="query" placeholder="Enter number, vector, or physics query">
+<h1>Math Engine Dashboard</h1>
+
+<!-- Existing math query UI -->
+<form method="POST" action="/math_engine/compute">
+    <label>Enter math query:</label>
+    <input type="text" name="query" value="{{ query or '' }}">
     <button type="submit">Compute</button>
 </form>
 
 {% if result %}
-    <h3>Result</h3>
-    <pre>{{ result }}</pre>
+<pre>{{ result }}</pre>
 {% endif %}
+
+<hr>
+
+<!-- NEW: Perspective–Zeta Duality Panel -->
+<h2>Perspective–Zeta Duality Panel</h2>
+
+<div style="margin-bottom: 1rem;">
+    <label>Rotation (theta):</label>
+    <input id="theta" type="range" min="-3.14" max="3.14" step="0.01" value="0">
+</div>
+
+<div style="margin-bottom: 1rem;">
+    <label>Perspective Vector:</label>
+    <input id="px" type="number" value="0" step="0.1">
+    <input id="py" type="number" value="0" step="0.1">
+    <input id="pz" type="number" value="1" step="0.1">
+</div>
+
+<button onclick="updateTransform()">Apply Transform</button>
+
+<pre id="output" style="margin-top: 1rem; background:#eee; padding:1rem;"></pre>
+
+<script>
+async function updateTransform() {
+    const payload = {
+        theta: parseFloat(document.getElementById("theta").value),
+        px: parseFloat(document.getElementById("px").value),
+        py: parseFloat(document.getElementById("py").value),
+        pz: parseFloat(document.getElementById("pz").value),
+        point: [1, 0, 0]
+    };
+
+    const res = await fetch("/math_engine/perspective_zeta", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+}
+</script>
+
+{% endblock %}

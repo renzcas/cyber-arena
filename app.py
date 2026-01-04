@@ -23,7 +23,7 @@ app.register_blueprint(red_team_bp, url_prefix="/red")
 app.register_blueprint(blue_team_bp, url_prefix="/blue")
 app.register_blueprint(grey_team_bp, url_prefix="/grey")
 app.register_blueprint(cybernauts_bp, url_prefix="/cybernauts")
-app.register_blueprint(math_engine_bp, url_prefix="/math")
+app.register_blueprint(math_engine_bp, url_prefix="/math_engine")
 app.register_blueprint(prime_bp, url_prefix="/prime")
 app.register_blueprint(python_lab_bp)
 
