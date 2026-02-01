@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, jsonify
 from .prime import PrimeCybernaut
 from .profiles import get_profile
+from core.arena_state import get_arena_state
 
 cybernauts_bp = Blueprint(
     "cybernauts",
