@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Console Terminal</title>
+    <link rel="stylesheet" href="/cybernauts/panels/panels.css">
+</head>
+<body>
+    <div class="panel">
+        <h1>Console Terminal</h1>
+
+        <label>Channel:</label>
+        <select id="channel">
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="grey">Grey</option>
+            <option value="system">System</option>
+        </select>
+
+        <br><br>
+
+        <textarea id="command" rows="4" cols="50" placeholder="Enter JSON command..."></textarea>
+        <br><br>
+
+        <button onclick="sendCommand()">Send</button>
+    </div>
+
+    <script src="/cybernauts/panels/console_terminal.js"></script>
+</body>
+</html>
