@@ -1,112 +1,90 @@
+# cyberarena/app.py
+
+import asyncio
+import os
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
-import os
 
+# Environment + Director
+from cyberarena.environment.cyber_env import CyberEnvironment
+from cyberarena.director.director import Director
+
+# Telemetry
 from cyberarena.telemetry.stream import stream
 from cyberarena.telemetry.events import Event
 
-# --- NEW IMPORTS ---
-from cyberarena.fusion.fusion_openclaw import ENERGY_ENGINE
-from core.scoring_engine import ScoringEngine
-from pydantic import BaseModel
-from typing import List, Tuple
 
-app = FastAPI()
+# ---------------------------------------------------------
+# FastAPI App
+# ---------------------------------------------------------
+app = FastAPI(title="CyberArena Ecosystem")
 
-# Serve cockpit static files
+
+# ---------------------------------------------------------
+# Cockpit Static Files
+# ---------------------------------------------------------
+COCKPIT_DIR = os.path.join(os.path.dirname(__file__), "cockpit")
+
 app.mount(
     "/cockpit",
-    StaticFiles(directory=os.path.join(os.path.dirname(__file__), "cockpit")),
+    StaticFiles(directory=COCKPIT_DIR),
     name="cockpit"
 )
 
-SCORING_ENGINE = ScoringEngine()
 
-# -----------------------------
-# ENERGY TELEMETRY ENDPOINT
-# -----------------------------
-class EnergySeries(BaseModel):
-    agent_id: str
-    role: str
-    points: List[Tuple[float, float, float]]
+# ---------------------------------------------------------
+# Initialize Environment + Director
+# ---------------------------------------------------------
+# Later you can pass an InfoPhyzx engine:
+# env = CyberEnvironment(infophyzx_engine=my_engine)
+env = CyberEnvironment()
+director = Director()
 
-class EnergyResponse(BaseModel):
-    series: List[EnergySeries]
 
-@app.get("/telemetry/energy", response_model=EnergyResponse)
-def get_energy():
-    roles = {
-        "agent_red_1": "RED",
-        "agent_blue_1": "BLUE",
-        "agent_purple_1": "PURPLE",
-    }
-    all_series = ENERGY_ENGINE.get_all_series()
-    return EnergyResponse(
-        series=[
-            EnergySeries(agent_id=aid, role=roles.get(aid, "UNKNOWN"), points=pts)
-            for aid, pts in all_series.items()
-        ]
-    )
+# ---------------------------------------------------------
+# Startup: Begin Environment Loop
+# ---------------------------------------------------------
+@app.on_event("startup")
+async def startup_event():
+    """
+    When the server starts, begin the environment heartbeat loop.
+    """
+    asyncio.create_task(environment_loop())
 
-# -----------------------------
-# PHASE SPACE ENDPOINT
-# -----------------------------
-class PhasePoint(BaseModel):
-    t: float
-    x: float
-    y: float
 
-class PhaseSeries(BaseModel):
-    agent_id: str
-    role: str
-    coord: str
-    points: List[PhasePoint]
+async def environment_loop():
+    """
+    Runs forever. Calls env.tick() every second.
+    Then passes the environment state to the Director.
+    """
+    while True:
+        await env.tick()
+        await director.on_tick(env.state)
 
-class PhaseResponse(BaseModel):
-    series: List[PhaseSeries]
 
-@app.get("/telemetry/phase_space", response_model=PhaseResponse)
-def get_phase_space():
-    roles = {
-        "agent_red_1": "RED",
-        "agent_blue_1": "BLUE",
-        "agent_purple_1": "PURPLE",
-    }
-    coord_map = {
-        "agent_red_1": "anomaly_pressure",
-        "agent_blue_1": "system_risk",
-        "agent_purple_1": "symbolic_load",
-    }
+# ---------------------------------------------------------
+# Root Endpoint
+# ---------------------------------------------------------
+@app.get("/")
+def home():
+    return {"status": "CyberArena Ecosystem Running"}
 
-    history = ENERGY_ENGINE.get_state_history()
-    series = []
 
-    for agent_id, states in history.items():
-        role = roles.get(agent_id, "UNKNOWN")
-        coord = coord_map.get(agent_id)
-        if not coord:
-            continue
+# ---------------------------------------------------------
+# WebSocket Endpoint
+# ---------------------------------------------------------
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    """
+    Handles WebSocket connections from cockpit panels.
+    """
+    await stream.connect(ws)
 
-        pts = [
-            PhasePoint(t=st.t, x=st.q.get(coord, 0.0), y=st.dq.get(coord, 0.0))
-            for st in states
-        ]
+    try:
+        while True:
+            msg = await ws.receive_text()
+            event = Event.make("client_message", {"msg": msg})
+            await stream.broadcast(event)
 
-        series.append(
-            PhaseSeries(agent_id=agent_id, role=role, coord=coord, points=pts)
-        )
-
-    return PhaseResponse(series=series)
-
-# -----------------------------
-# SCORING ENDPOINT
-# -----------------------------
-class ScoreResponse(BaseModel):
-    red: int
-    blue: int
-    purple: int
-
-@app.get("/telemetry/scoring", response_model=ScoreResponse)
-def get_scores():
-    s = SCORING_ENGINE.snapshot()
-    return ScoreResponse(red=s["RED"], blue=s["BLUE"], purple=s["PURPLE"])
+    except Exception:
+        await stream.disconnect(ws)
