@@ -1,8 +1,12 @@
 # cyberarena/director/director.py
 
 from typing import Any, Dict, List
+
 from cyberarena.director.scheduler import Scheduler
 from cyberarena.director.narrative_hooks import NarrativeHooks
+from cyberarena.organ_factory.loader import load_all_organs
+from cyberarena.organ_factory.factory import OrganFactory
+from cyberarena.organ_factory.registry import OrganRegistry
 
 
 class Director:
@@ -17,8 +21,15 @@ class Director:
         self.narrative = NarrativeHooks()
         self.organs: List[Any] = []
 
+        # Load all organ modules (auto-discovers organs)
+        load_all_organs()
+
+        # Instantiate all registered organs
+        for name, organ_cls in OrganRegistry.all().items():
+            self.organs.append(organ_cls())
+
     def register_organ(self, organ):
-        """Attach an organ to the simulation."""
+        """Manually attach an organ to the simulation."""
         self.organs.append(organ)
 
     async def on_tick(self, env_state: Dict[str, Any]):

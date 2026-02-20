@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CyberArena Unified Cockpit</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #0b0b0b;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+        }
+
+        #tabs {
+            display: flex;
+            background: #111;
+            border-bottom: 2px solid #333;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-right: 1px solid #333;
+            color: #aaa;
+        }
+
+        .tab.active {
+            background: #222;
+            color: #4af;
+            font-weight: bold;
+        }
+
+        .panel {
+            display: none;
+            padding: 20px;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        pre {
+            background: #111;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="tabs">
+        <div class="tab active" data-panel="env">Environment</div>
+        <div class="tab" data-panel="recon">Recon</div>
+        <div class="tab" data-panel="energy">Fusion: Energy</div>
+        <div class="tab" data-panel="interaction">Fusion: Interactions</div>
+        <div class="tab" data-panel="symbolic">Fusion: Symbolic</div>
+    </div>
+
+    <div id="env" class="panel active">
+        <h2>Environment Tick</h2>
+        <pre id="env_log"></pre>
+    </div>
+
+    <div id="recon" class="panel">
+        <h2>Recon Organ Output</h2>
+        <pre id="recon_log"></pre>
+    </div>
+
+    <div id="energy" class="panel">
+        <h2>Fusion Engine: Energy</h2>
+        <pre id="energy_log"></pre>
+    </div>
+
+    <div id="interaction" class="panel">
+        <h2>Fusion Engine: Interactions</h2>
+        <pre id="interaction_log"></pre>
+    </div>
+
+    <div id="symbolic" class="panel">
+        <h2>Fusion Engine: Symbolic State</h2>
+        <pre id="symbolic_log"></pre>
+    </div>
+
+    <script>
+        // Tab switching logic
+        const tabs = document.querySelectorAll(".tab");
+        const panels = document.querySelectorAll(".panel");
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", () => {
+                tabs.forEach(t => t.classList.remove("active"));
+                panels.forEach(p => p.classList.remove("active"));
+
+                tab.classList.add("active");
+                document.getElementById(tab.dataset.panel).classList.add("active");
+            });
+        });
+
+        // WebSocket connection
+        const ws = new WebSocket("ws://" + location.host + "/ws");
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === "env.tick") {
+                env_log.textContent += JSON.stringify(data.payload, null, 2) + "\n\n";
+            }
+
+            if (data.type === "recon.update") {
+                recon_log.textContent += JSON.stringify(data.payload, null, 2) + "\n\n";
+            }
+
+            if (data.type === "fusion.energy") {
+                energy_log.textContent += JSON.stringify(data.payload, null, 2) + "\n\n";
+            }
+
+            if (data.type === "fusion.interaction") {
+                interaction_log.textContent += JSON.stringify(data.payload, null, 2) + "\n\n";
+            }
+
+            if (data.type === "fusion.symbolic") {
+                symbolic_log.textContent += JSON.stringify(data.payload, null, 2) + "\n\n";
+            }
+        };
+    </script>
+
+</body>
+</html>
