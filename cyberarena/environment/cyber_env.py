@@ -5,21 +5,23 @@ from typing import Any, Dict
 
 from cyberarena.environment.base_env import BaseEnvironment
 from cyberarena.libs.infophyzx.field_adapter import FieldAdapter
+from cyberarena.fusion.fusion_engine import FusionEngine
 
 
 class CyberEnvironment(BaseEnvironment):
     """
     The main CyberArena environment.
-    Extends BaseEnvironment with:
-      - InfoPhyzx field integration
-      - async tick loop
-      - action handling
+    Integrates:
+      - InfoPhyzx engine (optional)
+      - FieldAdapter
+      - FusionEngine
     """
 
     def __init__(self, infophyzx_engine=None):
         super().__init__()
         self.infophyzx_engine = infophyzx_engine
         self.field_adapter = FieldAdapter()
+        self.fusion = FusionEngine()
 
     # ---------------------------------------------------------
     # Reset the environment
@@ -28,7 +30,6 @@ class CyberEnvironment(BaseEnvironment):
         self.t = 0
         self.state = {"t": self.t}
 
-        # Reset InfoPhyzx engine if present
         if self.infophyzx_engine:
             self.field_state = self.infophyzx_engine.reset()
 
@@ -41,7 +42,6 @@ class CyberEnvironment(BaseEnvironment):
         self.t += 1
         self.state["t"] = self.t
 
-        # Apply action to InfoPhyzx engine if present
         if self.infophyzx_engine:
             self.field_state = self.infophyzx_engine.step(action)
 
@@ -53,7 +53,7 @@ class CyberEnvironment(BaseEnvironment):
     async def tick(self):
         """
         Called every second by the orchestrator.
-        Pulls InfoPhyzx field state → converts → broadcasts.
+        Pulls InfoPhyzx state → converts → broadcasts → fusion.
         """
         self.t += 1
 
@@ -70,7 +70,18 @@ class CyberEnvironment(BaseEnvironment):
         # Broadcast to cockpit
         from cyberarena.telemetry.events import Event
         from cyberarena.telemetry.stream import stream
-
         await stream.broadcast(Event.make("env.tick", event["payload"]))
+
+        # Fusion Engine: process physics → cockpit
+        if self.field_state:
+            if hasattr(self.field_state, "energy"):
+                await self.fusion.process_energy(self.field_state.energy)
+
+            if hasattr(self.field_state, "interactions"):
+                for interaction in self.field_state.interactions:
+                    await self.fusion.process_interaction(interaction)
+
+            if hasattr(self.field_state, "symbolic"):
+                await self.fusion.process_symbolic(self.field_state.symbolic)
 
         await asyncio.sleep(1)

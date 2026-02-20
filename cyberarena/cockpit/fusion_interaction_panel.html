@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fusion Interaction Panel</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #f88; padding: 20px; }
+        #log { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h2>Fusion Engine: Interactions</h2>
+    <div id="log"></div>
+
+    <script>
+        const log = document.getElementById("log");
+        const ws = new WebSocket("ws://" + location.host + "/ws");
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === "fusion.interaction") {
+                log.textContent += JSON.stringify(data.payload, null, 2) + "\n\n";
+            }
+        };
+    </script>
+</body>
+</html>

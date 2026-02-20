@@ -1,5 +1,12 @@
 import random
+from cyberarena.organ_factory.registry import OrganRegistry
+from cyberarena.telemetry.events import Event
+from cyberarena.telemetry.stream import stream
 
+
+# ---------------------------------------------------------
+# Standalone recon function (your original code)
+# ---------------------------------------------------------
 def simulated_recon_scan(target: str):
     if not target:
         return ["No target provided"]
@@ -14,3 +21,27 @@ def simulated_recon_scan(target: str):
         "OS guess: Linux (simulated)",
         "Recon complete."
     ]
+
+
+# ---------------------------------------------------------
+# Organ wrapper so CyberArena can run recon every tick
+# ---------------------------------------------------------
+class ReconOrgan:
+    def __init__(self, target="localhost"):
+        self.target = target
+
+    async def update(self, env_state):
+        """
+        Called every environment tick by the Director.
+        Runs a simulated recon scan and sends results to cockpit.
+        """
+        results = simulated_recon_scan(self.target)
+
+        await stream.broadcast(Event.make(
+            "recon.update",
+            {"target": self.target, "results": results}
+        ))
+
+
+# Register organ with the factory
+OrganRegistry.register("recon", ReconOrgan)

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recon Panel</title>
+    <style>
+        body { font-family: monospace; background: #111; color: #4af; padding: 20px; }
+        #log { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h2>Recon Organ Output</h2>
+    <div id="log"></div>
+
+    <script>
+        const log = document.getElementById("log");
+        const ws = new WebSocket("ws://" + location.host + "/ws");
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === "recon.update") {
+                log.textContent += "Target: " + data.payload.target + "\n";
+                data.payload.results.forEach(r => log.textContent += "  " + r + "\n");
+                log.textContent += "\n";
+            }
+        };
+    </script>
+</body>
+</html>
