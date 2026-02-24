@@ -1,0 +1,7 @@
+from pydantic import BaseModel
+
+class Target(BaseModel):
+    name: str
+    ip: str
+    port: int
+    protocol: str = "http"

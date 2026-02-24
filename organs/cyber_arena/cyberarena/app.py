@@ -13,12 +13,10 @@ from cyberarena.director.director import Director
 from cyberarena.telemetry.stream import stream
 from cyberarena.telemetry.events import Event
 
-
 # ---------------------------------------------------------
 # FastAPI App
 # ---------------------------------------------------------
 app = FastAPI(title="CyberArena Ecosystem")
-
 
 # ---------------------------------------------------------
 # Cockpit Static Files
@@ -31,7 +29,6 @@ app.mount(
     name="cockpit"
 )
 
-
 # ---------------------------------------------------------
 # Initialize Environment + Director
 # ---------------------------------------------------------
@@ -39,7 +36,6 @@ app.mount(
 # env = CyberEnvironment(infophyzx_engine=my_engine)
 env = CyberEnvironment()
 director = Director()
-
 
 # ---------------------------------------------------------
 # Startup: Begin Environment Loop
@@ -51,7 +47,6 @@ async def startup_event():
     """
     asyncio.create_task(environment_loop())
 
-
 async def environment_loop():
     """
     Runs forever. Calls env.tick() every second.
@@ -61,7 +56,6 @@ async def environment_loop():
         await env.tick()
         await director.on_tick(env.state)
 
-
 # ---------------------------------------------------------
 # Root Endpoint
 # ---------------------------------------------------------
@@ -69,22 +63,17 @@ async def environment_loop():
 def home():
     return {"status": "CyberArena Ecosystem Running"}
 
-
 # ---------------------------------------------------------
 # WebSocket Endpoint
 # ---------------------------------------------------------
 @app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket):
-    """
-    Handles WebSocket connections from cockpit panels.
-    """
-    await stream.connect(ws)
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    async for event in stream():
+        await websocket.send_json(event.dict())
 
-    try:
-        while True:
-            msg = await ws.receive_text()
-            event = Event.make("client_message", {"msg": msg})
-            await stream.broadcast(event)
-
-    except Exception:
-        await stream.disconnect(ws)
+# ---------------------------------------------------------
+# Targets Registry Routes
+# ---------------------------------------------------------
+from cyberarena.targets.routes import router as targets_router
+app.include_router(targets_router)
